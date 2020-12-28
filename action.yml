@@ -1,0 +1,21 @@
+name: 'Action dispatcher'
+description: 'Dispatch workflow events'
+runs:
+  using: 'node12'
+  main: 'dist-ncc/index.js'
+inputs:
+  repo:
+    description: 'Repository'
+    required: false
+  token:
+    description: 'Personal access token'
+    required: true
+  type:
+    description: 'Workflow or repository dispatch'
+    default: 'workflow'
+  ident:
+    description: 'Event identifier'
+    required: true
+  payload:
+    description: 'Payload for the dispatched event'
+    required: false

@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+
+  build: # to work as an action out of the box the ncc-build must be committed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+    - run: yarn install --frozen-lockfile
+    - run: yarn build
+
+    - run: git add -f dist-ncc
+
+    - name: Commit build if it changed
+      run: >
+        git diff --staged --quiet
+        || (git config user.name "${GITHUB_ACTOR}"
+        && git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        && git commit -m "build: autoupdate")
+    - name: Set env var
+      run: |
+        echo "sha was: ${GITHUB_SHA}"
+        echo "sha is: $(git rev-parse HEAD)"
+        echo "sha=$(git rev-parse HEAD)" >>$GITHUB_ENV
+
+    - if: env.sha != github.sha # skip if the build adds nothing new
+      name: Dispatch workflow_dispatch event on fresh build
+      uses: ./
+      with:
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        ident: example-workflow.yml # refer to the filename
+        payload: '{"name":"foo","ref":"${{ env.sha }}"}'
+
+    - if: env.sha != github.sha # skip if the build adds nothing new
+      name: Dispatch repository_dispatch event on fresh build
+      uses: ./
+      with:
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        type: repository
+        ident: Example repository_dispatch # refer to on.repository_dispatch.types.*
+        payload: '{"name":"foo","ref":"${{ env.sha }}"}'
+
+    - if: env.sha != github.sha # skip if the build adds nothing new
+      run: git push
