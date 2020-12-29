@@ -12,7 +12,6 @@ export async function run(): Promise<void> {
             payload,
         } = getParams()
 
-        ;(() => { return })() // change build files
         return dispatchGithubEvent(repository, token, type, identifier, payload)
             .then(
                 () => core.info(`Dispatched ${type} event "${identifier}" on ${repository}`),

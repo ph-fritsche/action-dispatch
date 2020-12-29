@@ -7,9 +7,11 @@ on:
         description: Whom to greet
         required: true
       ref:
-        name:
-          description: Ref the event is for
-          required: true
+        description: Ref the event is for
+        required: true
+      check:
+        description: Check run to complete
+        required: true
 
 jobs:
   hello:
@@ -17,3 +19,16 @@ jobs:
     steps:
     - run: echo 'Hello ${{github.event.inputs.name}}!'
     - run: echo 'dispatched for ${{github.event.inputs.ref}}'
+
+    - name: Complete check for the build
+      uses: actions/github-script@v3
+      with:
+        script: |
+          const [owner, repo] = "${{ github.repository }}".split('/')
+          await github.checks.update({
+            owner,
+            repo,
+            head_sha: "${{github.event.inputs.ref}}",
+            check_run_id: "${{github.event.inputs.check}}",
+            conclusion: "success"
+          })
