@@ -116,3 +116,26 @@ jobs:
         git fetch --depth=2 origin ${{ needs.build.outputs.buildCommit }}
         git log --format=oneline -n2 ${{ needs.build.outputs.buildCommit }}
         git push -v origin ${{ needs.build.outputs.buildCommit }}:${{ steps.helper.outputs.branchName }}
+
+  release:
+    needs: [build, verify]
+    if: contains('refs/heads/master,refs/heads/beta,refs/heads/next,refs/heads/alpha', github.ref)
+    runs-on: ubuntu-latest
+    steps:
+    - id: helper
+      uses: ph-fritsche/action-helper@master
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ steps.helper.outputs.branchName }}
+    - name: Ensure branch HEAD did not move
+      run: |
+        EXPECTED="${{ needs.build.outputs.buildCommit || github.sha }}"
+        ACTUAL="$(git rev-parse HEAD)"
+        if [ $ACTUAL != $EXPECTED ]; then
+          echo "::error ::HEAD moved to ${ACTUAL} - expected ${EXPECTED}"
+          exit 1
+        fi
+    - name: Release
+      uses: ph-fritsche/action-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
