@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-node@v1
-    - run: yarn install --frozen-lockfile
+    - uses: bahmutov/npm-install@v1
     - run: yarn build
 
     - run: git add -f dist-ncc
@@ -33,10 +33,9 @@ jobs:
   verify:
     needs: build
     runs-on: ubuntu-latest
-    if: needs.build.outputs.buildCommit
     steps:
     - id: check
-      name: Add pending checks to the build
+      name: Add pending checks to the build (or recent commit)
       uses: actions/github-script@v3
       with:
         script: |
@@ -45,14 +44,14 @@ jobs:
             workflow: (await github.checks.create({
               owner,
               repo,
-              head_sha: "${{needs.build.outputs.buildCommit}}",
+              head_sha: "${{ needs.build.outputs.buildCommit || github.sha }}",
               name: "workflow_dispatch",
               status: "in_progress",
             })).data.id,
             repository: (await github.checks.create({
               owner,
               repo,
-              head_sha: "${{needs.build.outputs.buildCommit}}",
+              head_sha: "${{ needs.build.outputs.buildCommit || github.sha }}",
               name: "repository_dispatch",
               status: "in_progress",
             })).data.id,
@@ -60,8 +59,8 @@ jobs:
 
     - uses: actions/checkout@v2
       with:
-        ref: ${{ needs.build.outputs.buildCommit }}
-    - name: Dispatch workflow_dispatch event on fresh build
+        ref: ${{ needs.build.outputs.buildCommit || github.sha }}
+    - name: Dispatch workflow_dispatch event
       uses: ./
       with:
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -69,10 +68,10 @@ jobs:
         payload: >
           {
             "name":"foo",
-            "ref":"${{ needs.build.outputs.buildCommit }}",
+            "ref":"${{ needs.build.outputs.buildCommit || github.sha }}",
             "check":"${{ fromJSON(steps.check.outputs.result).workflow }}"
           }
-    - name: Dispatch repository_dispatch event on fresh build
+    - name: Dispatch repository_dispatch event
       uses: ./
       with:
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -81,7 +80,7 @@ jobs:
         payload: >
           {
             "name":"foo",
-            "ref":"${{ needs.build.outputs.buildCommit }}",
+            "ref":"${{ needs.build.outputs.buildCommit || github.sha }}",
             "check":"${{ fromJSON(steps.check.outputs.result).repository }}"
           }
 
@@ -91,27 +90,34 @@ jobs:
       with:
         script: |
           const [owner, repo] = "${{ github.repository }}".split('/')
+          const dispatchCheckIds = [
+            ${{ fromJSON(steps.check.outputs.result).workflow }},
+            ${{ fromJSON(steps.check.outputs.result).repository }},
+          ]
           while(true) {
             await new Promise(r => setTimeout(r, 5000))
             const checks = (await github.checks.listForRef({
               owner,
               repo,
-              ref: "${{ needs.build.outputs.buildCommit }}"
+              ref: "${{ needs.build.outputs.buildCommit || github.sha }}"
             })).data
-            const completed = checks.check_runs.filter(c => c.status === 'completed')
-            const success = checks.check_runs.filter(c => c.conclusion === 'success')
-            core.info(JSON.stringify(checks.check_runs.map(c => [c.name, c.status, c.conclusion])))
-            if (checks.total_count === completed.length) {
-              if (success.length < checks.total_count) {
-                throw JSON.stringify(checks, null, 2)
+            const dispatchChecks = checks.check_runs.filter(c => dispatchCheckIds.includes(c.id))
+            const completed = dispatchChecks.filter(c => c.status === 'completed')
+            const success = dispatchChecks.filter(c => c.conclusion === 'success')
+            core.info(JSON.stringify(dispatchChecks.map(c => [c.name, c.status, c.conclusion])))
+            if (completed.length === dispatchChecks.length) {
+              if (success.length < dispatchChecks.length) {
+                throw JSON.stringify(dispatchChecks, null, 2)
               } else {
                 return true
               }
             }
           }
-    - id: helper
+    - if: needs.build.outputs.buildCommit
+      id: helper
       uses: ph-fritsche/action-helper@master
-    - name: Push back to original branch
+    - if: needs.build.outputs.buildCommit
+      name: Push back to original branch
       run: |
         git fetch --depth=2 origin ${{ needs.build.outputs.buildCommit }}
         git log --format=oneline -n2 ${{ needs.build.outputs.buildCommit }}
