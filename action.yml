@@ -1,4 +1,4 @@
-name: Dispatch
+name: Dispatch event!
 description: Create workflow_dispatch or repository_dispatch events
 branding:
   icon: wifi
