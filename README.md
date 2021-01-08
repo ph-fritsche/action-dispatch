@@ -14,7 +14,7 @@ This requires a personal access token with the `repo` scope.
 jobs:
   some-job:
     - name: Dispatch workflow_dispatch event
-      uses: ph-fritsche/action-dispatch
+      uses: ph-fritsche/action-dispatch@v1
       with:
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         ident: example-workflow.yml # refer to the filename
@@ -40,7 +40,7 @@ on:
 jobs:
   some-job:
     - name: Dispatch repository_dispatch event
-      uses: ph-fritsche/action-dispatch
+      uses: ph-fritsche/action-dispatch@v1
       with:
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         type: repository
