@@ -1,3 +1,6 @@
+[![action-release](https://img.shields.io/static/v1?logo=github-actions&logoColor=cyan&label=%F0%9F%9A%80&message=action-release&color=cyan)](https://github.com/ph-fritsche/action-release/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ph-fritsche/action-dispatch/Build?label=Build&logo=github-actions&logoColor=cyan)](https://github.com/ph-fritsche/action-release/blob/master/.github/workflows/build.yml)
+
 # action-dispatch
 
 Trigger `workflow_dispatch` and `repository_dispatch` events from a workflow.
